@@ -67,6 +67,11 @@ pushd $QT_46_SRC_DIR
 	-no-script \
 	-no-scripttools \
 	-no-declarative
+
+# Make qdoc3 library requirements. Order matters!
+make sub-{tools-bootstrap,moc,corelib,xml}
+
+# Make qdoc3 itself.
 pushd $QDOC3_DIR
 make -j4
 popd # $QDOC3_DIR
@@ -87,6 +92,10 @@ mkdir -p shiboken/build
 pushd shiboken/build
 cmake ..
 make -j4
+
+# Save path to ShibokenConfig.cmake.
+readonly SHIBOKEN_CONFIG_DIR=$PWD/data
+
 popd # shiboken/build
 popd # src
 
@@ -110,7 +119,8 @@ readonly ABSOLUTE_QT_SRC_DIR=$PWD/$QT_SRC_DIR
 pushd pyside/build
 cmake .. \
 	-DALTERNATIVE_QT_INCLUDE_DIR="$ABSOLUTE_QT_SRC_DIR/include" \
-	-DQT_SRC_DIR="$ABSOLUTE_QT_SRC_DIR"
+	-DQT_SRC_DIR="$ABSOLUTE_QT_SRC_DIR" \
+	-DShiboken_DIR="$SHIBOKEN_CONFIG_DIR"
 # Verbose so if it crashes we know where.
 make VERBOSE=1 apidoc
 popd # pyside/build
