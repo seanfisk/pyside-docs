@@ -107,6 +107,10 @@ if [[ ! -x "$PREFIX/bin/shiboken" ]]; then
 		"${EXTRA_CMAKE_FLAGS[@]:+${EXTRA_CMAKE_FLAGS[@]}}" \
 		..
 	make -j4
+	# Build the Shiboken docs as well.
+	make doc
+
+	# Install Shiboken to the prefix.
 	make install
 
 	popd # shiboken/build
