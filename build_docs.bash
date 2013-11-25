@@ -109,11 +109,11 @@ if [[ ! -x "$PREFIX/bin/shiboken" ]]; then
 	make -j4
 	make install
 
-	# Save path to ShibokenConfig.cmake.
-	readonly SHIBOKEN_CONFIG_DIR=$PWD/data
-
 	popd # shiboken/build
 fi
+
+# Save path to ShibokenConfig.cmake.
+readonly SHIBOKEN_CONFIG_DIR=shiboken/build/data
 
 popd # src
 
@@ -129,6 +129,32 @@ fi
 pushd src
 if [[ ! -d pyside ]]; then
 	git clone https://git.gitorious.org/pyside/pyside.git
+	# Apply patch to account for bugs:
+	# - sphinx-build doesn't need to by run with a Python interpreter. In the case of my machine, sphinx-build is stubbed out by pyenv and is actually a bash script, so this causes generation to fail.
+	# - shiboken doesn't accept the argument `--documentation-only', despite being documented as accepting it.
+	patch -p1 -d pyside <<'EOF'
+diff --git a/doc/CMakeLists.txt b/doc/CMakeLists.txt
+index 967c289..9a0f972 100644
+--- a/doc/CMakeLists.txt
++++ b/doc/CMakeLists.txt
+@@ -15,7 +15,7 @@ if (${SPHINX_BUILD} MATCHES "SPHINX_BUILD-NOTFOUND")
+ endif()
+ add_custom_target(apidoc
+                   COMMAND ${CMAKE_COMMAND} -E copy_directory ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR}/rst
+-                  COMMAND ${SHIBOKEN_PYTHON_INTERPRETER} ${SPHINX_BUILD} -b html  ${CMAKE_CURRENT_BINARY_DIR}/rst html
++                  COMMAND ${SPHINX_BUILD} -b html  ${CMAKE_CURRENT_BINARY_DIR}/rst html
+                  )
+ 
+ # create conf.py based on conf.py.in
+@@ -29,7 +29,6 @@ add_custom_target("docrsts"
+             --api-version=${SUPPORTED_QT_VERSION}
+             --typesystem-paths="${pyside_SOURCE_DIR}${PATH_SEP}${QtCore_SOURCE_DIR}${PATH_SEP}${QtDeclarative_SOURCE_DIR}${PATH_SEP}${QtGui_SOURCE_DIR}${PATH_SEP}${QtGui_BINARY_DIR}${PATH_SEP}${QtHelp_SOURCE_DIR}${PATH_SEP}${QtMaemo5_SOURCE_DIR}${PATH_SEP}${QtMultimedia_SOURCE_DIR}${PATH_SEP}${QtNetwork_SOURCE_DIR}${PATH_SEP}${QtOpenGL_SOURCE_DIR}${PATH_SEP}${QtScript_SOURCE_DIR}${PATH_SEP}${QtScriptTools_SOURCE_DIR}${PATH_SEP}${QtSql_SOURCE_DIR}${PATH_SEP}${QtSvg_SOURCE_DIR}${PATH_SEP}${QtTest_SOURCE_DIR}${PATH_SEP}${QtUiTools_SOURCE_DIR}${PATH_SEP}${QtWebKit_SOURCE_DIR}${PATH_SEP}${QtXml_SOURCE_DIR}${PATH_SEP}${QtXmlPatterns_SOURCE_DIR}${PATH_SEP}${phonon_SOURCE_DIR}"
+             --library-source-dir=${QT_SRC_DIR}
+-            --documentation-only
+             --documentation-data-dir=${DOC_DATA_DIR}
+             --output-directory=${CMAKE_CURRENT_BINARY_DIR}/rst
+             --documentation-code-snippets-dir=${CMAKE_CURRENT_SOURCE_DIR}/codesnippets${PATH_SEP}${CMAKE_CURRENT_SOURCE_DIR}/codesnippets/examples
+EOF
 fi
 if [[ -d pyside/build ]]; then
 	rm -r pyside/build
@@ -136,11 +162,17 @@ fi
 mkdir -p pyside/build
 readonly ABSOLUTE_QT_SRC_DIR=$PWD/$QT_SRC_DIR
 pushd pyside/build
+
 cmake .. \
 	-DALTERNATIVE_QT_INCLUDE_DIR="$ABSOLUTE_QT_SRC_DIR/include" \
 	-DQT_SRC_DIR="$ABSOLUTE_QT_SRC_DIR" \
 	-DShiboken_DIR="$SHIBOKEN_CONFIG_DIR"
+
+# Account for a bug (?) in the build process.
+cp PySide/QtCore/typesystem_core.xml doc
+
 # Verbose so if it crashes we know where.
 make VERBOSE=1 apidoc
+
 popd # pyside/build
 popd # src
