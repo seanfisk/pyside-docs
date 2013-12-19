@@ -20,9 +20,11 @@ if ! "$TAR" --version | grep --quiet --fixed-strings GNU; then
 	exit 1
 fi
 
-for tree in pyside shiboken; do
-	dir_name="$tree-$VERSION-docs"
-	cp -r "prefix/src/$tree/build/doc/html" "dist/$dir_name"
+SOFTWARE_NAMES=(pyside shiboken apiextractor)
+SOFTWARE_DIRS=(pyside/build shiboken/build shiboken/build/ApiExtractor)
+for ((i=0;i<${#SOFTWARE_NAMES[@]};++i)) do
+	dir_name="${SOFTWARE_NAMES[$i]}-$VERSION-docs"
+	cp -r "prefix/src/${SOFTWARE_DIRS[$i]}/doc/html" "dist/$dir_name"
 	pushd dist
 	"$TAR" --create --gzip --file="$dir_name.tar.gz" "$dir_name" &
 	"$TAR" --create --xz --file="$dir_name.tar.xz" "$dir_name" &
