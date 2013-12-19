@@ -94,6 +94,43 @@ if [[ ! -x "$PREFIX/bin/shiboken" ]]; then
 	# Download and build shiboken.
 	if [[ ! -d shiboken ]]; then
 		git clone https://git.gitorious.org/pyside/shiboken.git
+		patch -p1 -d shiboken <<'EOF'
+diff -rupN shiboken/ApiExtractor/CMakeLists.txt shiboken_modified/ApiExtractor/CMakeLists.txt
+--- shiboken/ApiExtractor/CMakeLists.txt        2013-12-12 16:19:50.632437280 +0100
++++ shiboken_modified/ApiExtractor/CMakeLists.txt       2013-12-12 16:20:58.208438891 +0100
+@@ -97,3 +97,5 @@ if (BUILD_TESTS)
+     enable_testing()
+     add_subdirectory(tests)
+ endif()
++
++add_subdirectory(doc)
+diff -rupN shiboken/ApiExtractor/doc/CMakeLists.txt shiboken_modified/ApiExtractor/doc/CMakeLists.txt
+--- shiboken/ApiExtractor/doc/CMakeLists.txt    2013-12-12 16:19:50.636437280 +0100
++++ shiboken_modified/ApiExtractor/doc/CMakeLists.txt   2013-12-12 16:21:12.384439228 +0100
+@@ -4,7 +4,7 @@ find_program(SPHINX sphinx-build DOC "Pa
+ if (SPHINX)
+     message("-- sphinx-build - found")
+     configure_file(conf.py.in conf.py @ONLY)
+-    add_custom_target(doc ${SPHINX} -b html -c . ${CMAKE_CURRENT_SOURCE_DIR} html )
++    add_custom_target(doc_apiextractor ${SPHINX} -b html -c . ${CMAKE_CURRENT_SOURCE_DIR} html )
+ else()
+     message("-- sphinx-build - not found! doc target disabled")
+ endif()
+\ No newline at end of file
+diff -rupN shiboken/doc/CMakeLists.txt shiboken_modified/doc/CMakeLists.txt
+--- shiboken/doc/CMakeLists.txt 2013-12-12 16:19:50.664437281 +0100
++++ shiboken_modified/doc/CMakeLists.txt        2013-12-12 16:21:27.584439590 +0100
+@@ -4,7 +4,7 @@ find_program(SPHINX sphinx-build DOC "Pa
+ if (SPHINX)
+     message("-- sphinx-build - found")
+     configure_file(conf.py.in conf.py @ONLY)
+-    add_custom_target(doc ${SPHINX} -b html -c . ${CMAKE_CURRENT_SOURCE_DIR} html )
++    add_custom_target(doc_shiboken ${SPHINX} -b html -c . ${CMAKE_CURRENT_SOURCE_DIR} html )
+ else()
+     message("-- sphinx-build - not found! doc target disabled")
+ endif()
+EOF
+		
 	fi
 	mkdir -p shiboken/build
 	pushd shiboken/build
@@ -108,7 +145,8 @@ if [[ ! -x "$PREFIX/bin/shiboken" ]]; then
 		..
 	make -j4
 	# Build the Shiboken docs as well.
-	make doc
+	make doc_shiboken
+	make doc_apiextractor
 
 	# Install Shiboken to the prefix.
 	make install
